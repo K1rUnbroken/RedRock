@@ -1,0 +1,19 @@
+# day01-lv1
+func HuiWen(s string) {
+	sli := make([]rune, 0, len(s))
+
+	for _, v := range s {
+		sli = append(sli, v)
+	}
+
+	for i := 0; i < len(sli)-1; i++ {
+		if sli[i] != sli[len(sli)-1-i] {
+			fmt.Println("false")
+			return
+		}
+	}
+
+	for i := 0; i < len(sli)/2; i++ {
+		fmt.Printf("%c", sli[i])
+	}
+}
