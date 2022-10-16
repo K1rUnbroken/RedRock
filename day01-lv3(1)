@@ -1,0 +1,22 @@
+#day01-lv3(1)
+
+func MaoPao() {
+	var arr [100]int
+	rand.Seed(time.Now().UnixNano())
+
+	for i := 0; i < len(arr); i++ {
+		arr[i] = rand.Intn(100)
+	}
+
+	for i := 0; i < len(arr)-1; i++ {
+		for j := 0; j < len(arr)-i-1; j++ {
+			if arr[j] > arr[j+1] {
+				temp := arr[j]
+				arr[j] = arr[j+1]
+				arr[j+1] = temp
+			}
+		}
+	}
+
+	fmt.Println(arr)
+}
