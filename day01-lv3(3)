@@ -1,0 +1,25 @@
+#day01-lv3(3)
+
+func ChaRu() {
+	var arr [100]int
+	rand.Seed(time.Now().UnixNano())
+
+	for i := 0; i < len(arr); i++ {
+		arr[i] = rand.Intn(100)
+	}
+
+	for i := 1; i < len(arr); i++ {
+		now := arr[i]
+		j := i - 1
+		for ; j >= 0; j-- {
+			if now >= arr[j] {
+				break
+			} else {
+				arr[j+1] = arr[j]
+			}
+		}
+		arr[j+1] = now
+	}
+
+	fmt.Println(arr)
+}
