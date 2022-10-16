@@ -1,0 +1,44 @@
+#day01-lv2(2)
+
+func main() {
+	choice := 1
+	var sli []float32
+
+	for {
+		fmt.Printf("\n退出(0)  计算(1)：\n")
+		fmt.Printf("请选择：\n")
+		fmt.Scanf("%d\n", &choice)
+
+		if choice == 0 {
+			break
+		}
+
+		sli = append(sli, calculate())
+		for _, v := range sli {
+			fmt.Printf("%v\t", v)
+		}
+	}
+}
+
+func calculate() float32 {
+	var x1, x2, res float32
+	var c string
+
+	fmt.Println("请输入：")
+	fmt.Scanf("%f %s %f", &x1, &c, &x2)
+	fmt.Scanln()
+
+	res = 0
+	switch c {
+	case "+":
+		res = x1 + x2
+	case "-":
+		res = x1 - x2
+	case "*":
+		res = x1 * x2
+	case "/":
+		res = x1 / x2
+	}
+
+	return res
+}
