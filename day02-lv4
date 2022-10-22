@@ -1,0 +1,39 @@
+#day02-lv4
+
+package main
+
+import "fmt"
+
+type Interface interface {
+	Len() int
+	Less(i, j int) bool
+	Swap(i, j int)
+}
+
+type Sli []int //自定义本质为整形切片的类型Sli
+
+// Len 实现接口的Len()方法,获取切片的元素个数
+func (s Sli) Len() int { return len(s) }
+
+// Less 实现接口的Less()方法
+func (s Sli) Less(i, j int) bool { return s[i] < s[j] }
+
+// Swap 实现接口的Swap()方法
+func (s Sli) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+// Sort 插入排序
+func Sort(sli Interface) {
+	for i := 1; i < sli.Len(); i++ {
+		for j := i; j > 0 && sli.Less(j, j-1); j-- {
+			sli.Swap(j, j-1)
+		}
+	}
+}
+
+func main() {
+	s := Sli{9, 6, -8, 5, 2, 1, 11, 0, 54, 2, 1, 34, 1, 9}
+	Sort(s)
+	fmt.Println(s)
+}
