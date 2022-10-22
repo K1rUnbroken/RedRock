@@ -1,0 +1,232 @@
+#day02-lv5
+
+package main
+
+import "fmt"
+
+type Coder struct {
+	name     string
+	stuNum   string
+	phoneNum string
+	codeLine int
+	birthday string
+	next     *Coder
+}
+
+// Init 添加一个节点作为头节点，用codeLine存放总的记录数量
+func Init(head **Coder) {
+	*head = new(Coder)
+	if (*head) == nil {
+		fmt.Println("error!")
+		return
+	}
+	(*head).name = ""
+	(*head).stuNum = ""
+	(*head).phoneNum = ""
+	(*head).codeLine = 0
+	(*head).birthday = ""
+	(*head).next = nil
+}
+
+// Check 检查添加的学号是否已经存在
+func Check(head *Coder, number string) int {
+	var target *Coder = head.next
+
+	for ; target != nil; target = target.next {
+		if target.stuNum == number {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+// Add 按照代码行数降序插入
+func Add(head **Coder) {
+	var newNode *Coder = new(Coder)
+	var target *Coder = *head
+	if newNode == nil {
+		fmt.Println("error!")
+		return
+	}
+
+	fmt.Println("Please input the student name, student number, phone number, code line, birthday")
+	fmt.Scan(&newNode.name, &newNode.stuNum, &newNode.phoneNum, &newNode.codeLine, &newNode.birthday)
+	if Check(*head, newNode.stuNum) == 1 {
+		fmt.Println("The student number already exists!")
+		return
+	}
+
+	newNode.next = nil
+	(*head).codeLine++
+
+	if target.next == nil {
+		(*head).next = newNode
+	} else {
+		for ; target.next != nil && newNode.codeLine < target.next.codeLine; target = target.next {
+		}
+		newNode.next = target.next
+		target.next = newNode
+	}
+}
+
+// Show 遍历输出所有节点
+func Show(head *Coder) {
+	var target *Coder = head.next
+
+	if target == nil {
+		fmt.Println("Empty!")
+		return
+	} else {
+		for ; target != nil; target = target.next {
+			fmt.Println(target.name, target.stuNum, target.phoneNum, target.codeLine, target.birthday)
+		}
+	}
+	fmt.Printf("共%d条记录！\n", head.codeLine)
+}
+
+// Choose 选择
+func Choose() int {
+	var choice int
+
+	fmt.Println("AddRecord(1)  FindByName(2)  FindByNumber(3)  UpdateRecord(4)  Count(5)  Show(6)  Exit(0)")
+	fmt.Scan(&choice)
+
+	return choice
+}
+
+// FindName 按照名字查找
+func FindName(head *Coder) {
+	var target *Coder = head.next
+	var n int
+
+	if target == nil {
+		fmt.Println("Empty!")
+		return
+	} else {
+		var name string
+		fmt.Println("Please input the name:")
+		fmt.Scan(&name)
+		for ; target != nil; target = target.next {
+			if target.name == name {
+				fmt.Printf("%s  %s  %s  %d  %s\n", target.name, target.stuNum, target.phoneNum, target.codeLine, target.birthday)
+				n++
+			}
+		}
+	}
+
+	if n == 0 {
+		fmt.Println("Not Found!")
+	}
+}
+
+// FindNumber 按照学号查找
+func FindNumber(head *Coder) {
+	var target *Coder = head.next
+	var n int
+
+	if target == nil {
+		fmt.Println("Empty!")
+		return
+	} else {
+		var stuNum string
+		fmt.Println("Please input the student number:")
+		fmt.Scan(&stuNum)
+		for ; target != nil; target = target.next {
+			if target.stuNum == stuNum {
+				fmt.Printf("%s  %s  %s  %d  %s\n", target.name, target.stuNum, target.phoneNum, target.codeLine, target.birthday)
+				n++
+			}
+		}
+	}
+
+	if n == 0 {
+		fmt.Println("Not Found!")
+	}
+}
+
+// Delete 删除某个节点
+func Delete(head **Coder, i int) {
+	var target *Coder = *head
+
+	for j := 0; j < i-1; j++ {
+		target = target.next
+	}
+
+	target.next = target.next.next
+	(*head).codeLine--
+}
+
+// Update 更新记录
+func Update(head **Coder) {
+	var target *Coder = *head
+
+	if target.next == nil {
+		fmt.Println("Empty!")
+		return
+	} else {
+		var stuNum string
+		fmt.Println("Please input the student number of the information you want to modify:")
+		fmt.Scan(&stuNum)
+		for i := 1; target.next != nil; target = target.next {
+			if target.next.stuNum == stuNum {
+				Delete(head, i)
+				Add(head)
+				return
+			}
+			i++
+		}
+	}
+
+	fmt.Println("The student number you entered does not exist!")
+}
+
+// Count 统计代码行数大于100的同学并输出信息
+func Count(head *Coder) {
+	var target *Coder = (*head).next
+	var n int
+
+	if target == nil {
+		fmt.Println("Empty!")
+		return
+	} else {
+		for ; target != nil; target = target.next {
+			if target.codeLine > 100 {
+				fmt.Printf("%s  %s  %s  %d  %s\n", target.name, target.stuNum, target.phoneNum, target.codeLine, target.birthday)
+				n++
+			}
+		}
+	}
+
+	if n == 0 {
+		fmt.Println("No student meets the requirements!")
+	}
+}
+
+func main() {
+	var head *Coder = nil //头指针
+	var choice int
+
+	Init(&head)
+	for {
+		choice = Choose()
+		switch choice {
+		case 1:
+			Add(&head)
+		case 2:
+			FindName(head)
+		case 3:
+			FindNumber(head)
+		case 4:
+			Update(&head)
+		case 5:
+			Count(head)
+		case 6:
+			Show(head)
+		case 0:
+			return
+		default:
+			fmt.Println("invalid!")
+		}
+	}
+}
