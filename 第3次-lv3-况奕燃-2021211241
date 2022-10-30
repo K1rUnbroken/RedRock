@@ -1,0 +1,42 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+)
+
+func main() {
+	content := "I’m not afraid of difficulties and insist on learning programming"
+	fileName := "plan.txt"
+
+	f, error := os.Create(fileName)
+	if error != nil {
+		fmt.Println(error)
+		return
+	}
+
+	_, error = f.Write([]byte(content))
+	if error != nil {
+		fmt.Println(error)
+		return
+	}
+	f.Seek(0, 0)
+
+	result := make([]byte, 100)
+	buffer := make([]byte, 100)
+	for {
+		n, error := f.Read(buffer)
+		if error != nil && error != io.EOF {
+			fmt.Println(error)
+			return
+		}
+		if n == 0 {
+			break
+		}
+		result = append(result, buffer[:n]...)
+	}
+	f.Close()
+
+	fmt.Println("result:", string(result[:]))
+}
