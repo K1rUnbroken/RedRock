@@ -1,0 +1,21 @@
+package main
+
+import "fmt"
+
+func main() {
+	over := make(chan bool, 10)
+
+	for i := 0; i < cap(over); i++ {
+		go func(i int) {
+			fmt.Println(i)
+			over <- true
+		}(i)
+	}
+
+	for i := 0; i < cap(over); i++ {  //取10次值，如果没取到10次就阻塞，直到协程一共放了10个值到通道中
+		<-over
+	}
+
+	fmt.Println("over!!!")
+}
+
