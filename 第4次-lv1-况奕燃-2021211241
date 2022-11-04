@@ -1,0 +1,36 @@
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	var choice int
+	var skill string
+
+	fmt.Println("请选择(1-3)：")
+	fmt.Println("1.尝尝我的厉害吧！  2.小趴菜，接我一招！  3.啊——必杀技：")
+	fmt.Scanln(&choice)
+	fmt.Println("请输入你的必杀：")
+	fmt.Scanln(&skill)
+
+	switch choice {
+	case 1:
+		ReleaseSkill(skill, func(skillName string) {
+			fmt.Println("尝尝我的厉害吧！", skillName)
+		})
+	case 2:
+		ReleaseSkill(skill, func(skillName string) {
+			fmt.Println("小趴菜，接我一招！", skillName)
+		})
+	case 3:
+		ReleaseSkill(skill, func(skillName string) {
+			fmt.Println("啊——必杀技：", skillName)
+		})
+	}
+
+}
+
+func ReleaseSkill(skillNames string, releaseSkillFunc func(string)) {
+	releaseSkillFunc(skillNames)
+}
