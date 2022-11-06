@@ -1,0 +1,107 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+func ReadFile(oldUsers *map[string]string) {
+	fileName := "user.txt"
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("文件打开失败！")
+	}
+	defer file.Close()
+
+	data, error := os.ReadFile(fileName)
+	if error != nil {
+		fmt.Println("文件读取失败！")
+	}
+	error = json.Unmarshal(data, oldUsers)
+	if error != nil {
+		fmt.Println("反序列化失败！")
+	}
+}
+
+func Check(u, p string, oldUsers map[string]string) (bool, string) {
+	errInfo := ""
+	isOK := true
+
+	// 检查用户名是否存在
+	for k, _ := range oldUsers {
+		if u == k {
+			errInfo = "用户名已存在！"
+			isOK = false
+			break
+		}
+	}
+	// 检查密码是否大于6位
+	if len(p) <= 6 {
+		errInfo = "密码必须大于6位"
+		isOK = false
+	}
+
+	return isOK, errInfo
+}
+
+func Register(oldUsers *map[string]string) {
+	var userName, psw string
+
+	fmt.Println("----------注册--------------")
+	fmt.Println("请输入用户名和密码：(格式：张三 123456)")
+	fmt.Scanln(&userName, &psw)
+
+	isOK, errInfo := Check(userName, psw, *oldUsers)
+	if !isOK {
+		fmt.Println(errInfo)
+		return
+	}
+
+	(*oldUsers)[userName] = psw
+}
+
+func WriteFile(oldUsers map[string]string) {
+	fileName := "user.txt"
+	file, err := os.OpenFile(fileName, os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println("文件打开失败！")
+	}
+	defer file.Close()
+
+	sli, _ := json.Marshal(oldUsers)
+
+	_, error := file.Write(sli)
+	if error != nil {
+		fmt.Println(error)
+		return
+	}
+}
+
+func Menu() int {
+	choice := 0
+
+	fmt.Println("----------注册--------------")
+	fmt.Println("请选择：1.注册  2.退出")
+	fmt.Scanf("%d ", &choice)
+
+	return choice
+}
+
+func main() {
+	oldUsers := make(map[string]string)
+
+	ReadFile(&oldUsers)
+loop:
+	for {
+		choice := Menu()
+
+		switch choice {
+		case 1:
+			Register(&oldUsers)
+		case 2:
+			break loop
+		}
+	}
+	WriteFile(oldUsers)
+}
