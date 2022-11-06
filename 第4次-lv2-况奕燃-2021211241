@@ -1,0 +1,129 @@
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+type Clock struct {
+	number  int    //序号
+	repeat  int64  //重复间隔
+	say     bool   //是否提醒
+	open    bool   //是否开启
+	content string //提醒内容
+	time    string //提醒时间
+}
+
+var number int = 1
+
+// Add 添加闹钟
+func Add(clocks *[]Clock) {
+	var clock Clock
+	var repeat int64
+	var content, time, ymd, hms string
+
+	fmt.Println("---------添加闹钟----------")
+	fmt.Println("设置闹钟重复的时间间隔(秒)：")
+	fmt.Scanf("%d ", &repeat)
+	fmt.Println("设置闹钟的提醒时间(格式为2006-01-02 15:04:05)：")
+	fmt.Scanf("%s %s ", &ymd, &hms)
+	time = ymd + " " + hms
+	fmt.Println("设置闹钟的提醒内容：")
+	fmt.Scanf("%s ", &content)
+
+	clock.number = number
+	clock.say = true
+	clock.open = true
+	clock.repeat = repeat
+	clock.time = time
+	clock.content = content
+	*clocks = append(*clocks, clock)
+
+	go clock.Start()
+}
+
+// Start 启动闹钟
+func (clock *Clock) Start() {
+	interval := clock.Count()
+	clock.Timing(interval)
+
+	//重复
+	if clock.repeat != 0 {
+		for {
+			if clock.open == false {
+				break
+			}
+			clock.Timing(clock.repeat)
+		}
+	}
+}
+
+// CloseClock 关闭某个闹钟
+func CloseClock(clocks *[]Clock) {
+	var number int
+
+	fmt.Println("---------关闭闹钟----------")
+	fmt.Println("请输入要关闭的闹钟序号：")
+	fmt.Scanf("%d ", &number)
+
+	(*clocks)[number-1].open = false
+}
+
+func Skip(clocks *[]Clock) {
+	var number int
+
+	fmt.Println("---------跳过下一次提醒----------")
+	fmt.Println("请输入要跳过提醒的闹钟序号：")
+	fmt.Scanf("%d ", &number)
+
+	(*clocks)[number-1].say = false
+}
+
+// Count 计算当前与预定时间的间隔(秒)
+func (clock *Clock) Count() int64 {
+	now := time.Now()
+	loc, _ := time.LoadLocation("Asia/Chongqing")
+	t, _ := time.ParseInLocation("2006-01-02 15:04:05", clock.time, loc)
+
+	return t.Unix() - now.Unix()
+}
+
+// Timing 开始计时,结束后提醒
+func (clock *Clock) Timing(seconds int64) {
+	timer := time.NewTimer(time.Duration(seconds) * time.Second)
+	<-timer.C
+
+	if clock.say == true && clock.open == true {
+		for i := 0; i < 5; i++ {
+			fmt.Println("闹钟", clock.number, "   ", clock.content)
+		}
+	}
+	clock.say = true
+}
+
+func main() {
+	var clocks []Clock
+
+	for {
+		choice := Menu()
+		switch choice {
+		case 1:
+			Add(&clocks)
+			number++
+		case 2:
+			CloseClock(&clocks)
+		case 3:
+			Skip(&clocks)
+		}
+	}
+}
+
+func Menu() int {
+	var choice int
+
+	fmt.Println("---------菜单----------")
+	fmt.Println("0.退出  1.添加闹钟  2.关闭闹钟  3.跳过下一次提醒")
+	fmt.Scanf("%d ", &choice)
+
+	return choice
+}
