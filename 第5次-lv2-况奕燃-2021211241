@@ -1,0 +1,84 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+	"net/http"
+)
+
+var users = map[string]string{}
+
+func CheckLoginUsername(username string) bool {
+	if users[username] == "" {
+		return false
+	}
+	return true
+}
+
+func CheckLoginPassword(username, password string) bool {
+	if users[username] != password {
+		return false
+	}
+	return true
+}
+
+func CheckRegister(username string) bool {
+	if users[username] != "" {
+		return false
+	}
+	return true
+}
+
+func Login(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	flag := CheckLoginUsername(username)
+	if !flag {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  500,
+			"message": "user doesn't exists!",
+		})
+		return
+	}
+
+	flag = CheckLoginPassword(username, password)
+	if !flag {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  500,
+			"message": "wrong password!",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  200,
+		"message": "login successful!",
+	})
+}
+
+func Register(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	flag := CheckRegister(username)
+	if !flag {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  500,
+			"message": "user already exists!",
+		})
+		return
+	}
+
+	users[username] = password
+	c.JSON(http.StatusOK, gin.H{
+		"status":  200,
+		"message": "register successful!",
+	})
+}
+
+func main() {
+	r := gin.Default()
+	r.POST("/login", Login)
+	r.POST("/register", Register)
+	r.Run()
+}
