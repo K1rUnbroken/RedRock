@@ -1,0 +1,390 @@
+package main
+
+/**
+1.没有回复留言的功能
+2."secrets.txt"和"comments.txt"分别用于存储所有用户的密保信息和所有用户的相互留言，当他们是空文件的时候需要先手动添加空字典("{}")进去，不然使用json.Unmarshal()会出错
+*/
+
+import "database/sql"
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"net/http"
+	"os"
+)
+
+type user struct {
+	username string
+	password string
+}
+
+var db *sql.DB
+var userNow string = " "                    //当前用户
+var secrets map[string]map[string]string    //密保 {"user1":{"question":"answer"}}, {"user2":{...}}
+var comments map[string][]map[string]string //留言 {"user1":[{"visitor1":"comment"}, {"visitor2":"comment"}]}, {"user2":[...]}
+
+func InitDB() (err error) {
+	dsn := "root:123456789@tcp(localhost:3306)/stu"
+	db, err = sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// Check 检查登录账号是否存在；密码是否正确；注册账号是否存在
+func Check(username string) (string, string) {
+	sqlStr := "select * from t where username=?;"
+	row := db.QueryRow(sqlStr, username)
+	var u user
+	err := row.Scan(&u.username, &u.password)
+	if err != nil {
+		u.username = " "
+	}
+	return u.username, u.password
+}
+
+// Insert 插入记录
+func Insert(username, password string) (err error) {
+	sqlStr := "insert into t values(?,?);"
+	_, err = db.Exec(sqlStr, username, password)
+	return err
+}
+
+func ResponseSuccess(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  200,
+		"message": message,
+	})
+}
+
+func ResponseFail(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  500,
+		"message": message,
+	})
+}
+
+func Login(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	// 检查用户名是否存在以及密码是否正确
+	uname, psw := Check(username)
+	if uname == " " {
+		ResponseSuccess(c, "user doesn't exists!")
+		return
+	}
+	if psw != password {
+		ResponseSuccess(c, "wrong password!")
+		return
+	}
+
+	userNow = username // 设置当前用户
+	ResponseSuccess(c, "login success!")
+}
+
+func Register(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+
+	// 检查用户名是否存在
+	uname, _ := Check(username)
+	if uname != " " {
+		ResponseSuccess(c, "user exists!")
+		return
+	}
+
+	// 添加记录
+	err := Insert(username, password)
+	if err != nil {
+		ResponseFail(c, "fail to register!")
+		return
+	}
+
+	ResponseSuccess(c, "register success!")
+}
+
+// WriteSecretsToFile 把当前登录用户的密保信息写入文件
+func WriteSecretsToFile(c *gin.Context) {
+	fileName := "secrets"
+	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		ResponseFail(c, "fail to open file!")
+		return
+	}
+	defer file.Close()
+
+	data, err := json.Marshal(secrets)
+	if err != nil {
+		ResponseFail(c, "fail to marshal data!")
+		return
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		ResponseFail(c, "fail to write file!")
+		return
+	}
+
+	ResponseSuccess(c, "add secrets successful!")
+	secrets = make(map[string]map[string]string) // 清空secrets的内容
+}
+
+// ReadFileToSecrets 读取文件获取所有用户的密保信息
+func ReadFileToSecrets(c *gin.Context) {
+	fileName := "secrets"
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		ResponseFail(c, "fail to open file!")
+		c.Abort()
+		return
+	}
+	defer file.Close()
+
+	data, err := os.ReadFile(fileName)
+	if err != nil {
+		ResponseFail(c, "fail to read file!")
+		c.Abort()
+		return
+	}
+
+	err = json.Unmarshal(data, &secrets)
+	if err != nil {
+		ResponseFail(c, "fail to unmarshal data!(空文件，请手动在对应文件添加一个空字典'{}')")
+		c.Abort()
+		return
+	}
+
+	ResponseSuccess(c, "read file successful!")
+	c.Next()
+}
+
+// ReadFileToComments 读取文件获取所有用户的密保信息
+func ReadFileToComments(c *gin.Context) {
+	fileName := "comments"
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		ResponseFail(c, "fail to open file!")
+		c.Abort()
+		return
+	}
+	defer file.Close()
+
+	data, err := os.ReadFile(fileName)
+	if err != nil {
+		ResponseFail(c, "fail to read file!")
+		c.Abort()
+		return
+	}
+
+	err = json.Unmarshal(data, &comments)
+	if err != nil {
+		ResponseFail(c, "fail to unmarshal data!(空文件，请手动在对应文件添加一个空字典'{}')")
+		c.Abort()
+		return
+	}
+
+	ResponseSuccess(c, "read file successful!")
+	c.Next()
+}
+
+// RecoverPassword 找回密码
+func RecoverPassword(c *gin.Context) {
+	username := c.PostForm("username")
+	question := c.PostForm("question")
+	answer := c.PostForm("answer")
+
+	// 检查用户名是否存在
+	uname, _ := Check(username)
+	if uname == " " {
+		ResponseSuccess(c, "user doesn't exists!")
+		return
+	}
+
+	// 获取该用户的问题和答案
+	q := ""
+	a := ""
+	if v, isOK := secrets[username]; isOK {
+		for ques, answ := range v {
+			q = ques
+			a = answ
+		}
+	}
+
+	// 检查问题是否相同
+	if q != question {
+		ResponseSuccess(c, "wrong question!")
+		return
+	}
+	// 检查答案是否相同
+	if a != answer {
+		ResponseSuccess(c, "wrong answer!")
+		return
+	}
+
+	// 获取该用户的密码
+	password := ""
+	func() {
+		sqlStr := "select * from t where username=?;"
+		row := db.QueryRow(sqlStr, username)
+		var u user
+		err := row.Scan(&u.username, &u.password)
+		if err != nil {
+			ResponseFail(c, "fail to get password!")
+			return
+		}
+		password = u.password
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   200,
+		"password": password,
+	})
+	secrets = make(map[string]map[string]string) // 清空secrets的内容
+}
+
+// SetComments 给别人留言
+func SetComments(c *gin.Context) {
+	toWhom := c.PostForm("toWhom")
+	comment := c.PostForm("comment")
+
+	// 检查是否已经登录
+	if userNow == " " {
+		ResponseSuccess(c, "please login first!")
+		c.Abort()
+		return
+	}
+
+	// 检查被留言的用户名是否存在
+	uname, _ := Check(toWhom)
+	if uname == " " {
+		ResponseSuccess(c, "the user being commented on doesn't exist!")
+		c.Abort()
+		return
+	}
+
+	// 添加留言
+	oneComment := map[string]string{
+		userNow: comment,
+	}
+	if _, isOK := comments[toWhom]; isOK {
+		comments[toWhom] = append(comments[toWhom], oneComment)
+	} else {
+		var arr []map[string]string
+		arr = append(arr, oneComment)
+		comments[toWhom] = arr
+	}
+
+	ResponseSuccess(c, "comment successful!")
+	c.Next()
+}
+
+// WriteCommentsToFile 把留言写入文件
+func WriteCommentsToFile(c *gin.Context) {
+	fileName := "comments"
+	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		ResponseFail(c, "fail to open file!")
+		return
+	}
+	defer file.Close()
+
+	data, err := json.Marshal(comments)
+	if err != nil {
+		ResponseFail(c, "fail to marshal data!")
+		return
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		ResponseFail(c, "fail to write file!")
+		return
+	}
+
+	ResponseSuccess(c, "add comments successful!")
+	comments = make(map[string][]map[string]string) // 清空comments的内容
+}
+
+// ViewComments 查看留言
+func ViewComments(c *gin.Context) {
+	if userNow == " " {
+		ResponseSuccess(c, "please login first!")
+		return
+	}
+
+	var allComments []map[string]string
+
+	if arr, isOK := comments[userNow]; isOK {
+		for _, one := range arr {
+			allComments = append(allComments, one)
+		}
+	} else {
+		allComments = nil
+	}
+
+	if allComments != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status":   200,
+			"comments": allComments,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"status":   200,
+			"comments": "no comment!",
+		})
+	}
+	comments = make(map[string][]map[string]string) // 清空comments的内容
+}
+
+func SetSecrets(c *gin.Context) {
+	question := c.PostForm("question")
+	answer := c.PostForm("answer")
+
+	if userNow == " " {
+		ResponseSuccess(c, "please login first!")
+		c.Abort()
+		return
+	}
+
+	// 添加密保
+	secrets[userNow] = map[string]string{
+		question: answer,
+	}
+
+	ResponseSuccess(c, "set secrets successful!")
+	c.Next()
+}
+
+// OutLogin 退出登录
+func OutLogin(c *gin.Context) {
+	if userNow == " " {
+		ResponseSuccess(c, "please login first!")
+		return
+	}
+
+	userNow = " "
+	ResponseSuccess(c, "out login successful!")
+}
+
+func main() {
+	r := gin.Default()
+	err := InitDB()
+	if err != nil {
+		fmt.Println(err)
+	}
+	r.POST("/login", Login)
+	r.POST("/register", Register)
+	r.POST("/viewComments", ReadFileToComments, ViewComments)
+	r.POST("/setSecrets", ReadFileToSecrets, SetSecrets, WriteSecretsToFile)
+	r.POST("/findPassword", ReadFileToSecrets, RecoverPassword)
+	r.POST("/setComments", ReadFileToComments, SetComments, WriteCommentsToFile)
+	r.POST("/outLogin", OutLogin)
+	r.Run()
+}
