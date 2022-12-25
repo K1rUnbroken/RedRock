@@ -1,0 +1,216 @@
+go基础（a）
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"time"
+)
+
+type user struct {
+	Username string
+	Nickname string
+	Sex      uint8
+	Birthday time.Time
+}
+
+/**
+结构体user内的属性名首字母需要大写，让外部包json.marshal可以访问到，才能序列化成功
+ */
+func main() {
+	u := user{
+		Username: "坤坤",
+		Nickname: "阿坤",
+		Sex:      20,
+		Birthday: time.Now(),
+	}
+
+	bs, err := json.Marshal(&u)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	fmt.Println(string(bs))
+}
+
+
+
+go基础（b）
+package main
+
+import (
+	"fmt"
+)
+
+/*
+*没有输出3是因为先执行到"return"，defer func() {fmt.Println("3")}() 还没被执行，程序就结束了，所以只执行了打印1的defer
+ */
+func main() {
+	var a = true
+	defer func() {
+		fmt.Println("1")
+	}()
+	if a {
+		fmt.Println("2")
+		return
+	}
+	defer func() {
+		fmt.Println("3")
+	}()
+}
+
+
+
+并发相关（a）
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	ch := make(chan int, 1)
+
+	go func() {
+		fmt.Println("出现")
+		ch <- 1
+	}()
+	
+	<-ch
+}
+
+
+
+并发相关（b）
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+var wg sync.WaitGroup
+
+func main() {
+	ch2, ch3 := make(chan bool), make(chan bool)
+
+	wg.Add(3)
+
+	go f1(ch2, "goroutine1")
+	go f2(ch2, ch3, "goroutine2")
+	go f3(ch3, "goroutine3")
+	wg.Wait()
+	fmt.Println("successful")
+}
+
+func f1(ch2 chan bool, workName string) {
+	fmt.Println(workName)
+	ch2 <- true
+	wg.Done()
+}
+
+func f2(ch2 chan bool, ch3 chan bool, workName string) {
+	<-ch2
+	fmt.Println(workName)
+	ch3 <- true
+	wg.Done()
+}
+
+func f3(ch3 chan bool, workName string) {
+	<-ch3
+	fmt.Println(workName)
+	wg.Done()
+}
+
+
+
+并发相关（c）
+package main
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"sync"
+)
+
+var wg sync.WaitGroup
+
+func main() {
+	var arr [][2]int
+
+	for i := 2; i < 1000000; i++ {
+		wg.Add(1)
+		go find(i, &arr)
+	}
+
+	wg.Wait()
+	fmt.Println(arr)
+}
+
+func find(i int, arr *[][2]int) {
+	sum := 0
+	temp := 0
+
+	defer func() {
+		wg.Done()
+	}()
+
+	// 取得每个数位的数(除了0和1)存入arr2
+	var arr2 []int
+	str := strconv.Itoa(i)
+	for j := 0; j < len(str); j++ {
+		x, _ := strconv.Atoi(string(str[j]))
+		// 如果该数位的数是0，则不计入
+		if x == 0 {
+			continue
+		}
+		// 如果该数位的数是1，则不计入，但是给temp加1，最后再加到结果集中
+		if x == 1 {
+			temp += 1
+			continue
+		}
+		arr2 = append(arr2, x)
+	}
+
+	length := len(arr2)
+	// arr2为空，即这个数全部由0或1构成
+	if length == 0 {
+		return
+	}
+
+	// 如果各数位的数的n次方(从2次方开始)之和小于或等于这个数
+	for n := 2; (sum + temp) <= i; n++ {
+		sum = 0
+
+		// 把每个数位的数(除了0和1)的n次方相加
+		for j := 0; j < length; j++ {
+			result := int(math.Pow(float64(arr2[j]), float64(n)))
+			sum += result
+		}
+		// 如果是自幂数，则把这个数和对应的n次方加到结果集并返回
+		if (sum + temp) == i {
+			*arr = append(*arr, [2]int{i, n})
+			return
+		}
+	}
+
+	return
+}
+
+
+
+数据库相关（a）
+
+
+
+数据库相关（b）
+好处：当多次运行相同结构的SQL语句时可以提高效率；防止SQL注入
+
+
+
+编码能力题（坤蛋出海）
+
+
